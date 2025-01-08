@@ -19,15 +19,31 @@ for route in routes:
     # Store the response data for later access
     dynamic_responses[path] = response_data
 
-    # Dynamically add routes
     if method == "GET":
-        # Use a closure to capture the specific path
-        def create_get_route(response):
-            def dynamic_route():
-                return jsonify(response)
-            return dynamic_route
+        # Handle routes with path parameters
+        if "<int:" in path:
+            # Create a dynamic route with path parameters
+            def create_get_route_with_param(response):
+                def dynamic_route_with_param(user_id):
+                    # Check if the user_id exists in the response data
+                    user = response.get(str(user_id))
+                    if user:
+                        return jsonify(user)
+                    else:
+                        return jsonify({"error": "User not found"}), 404
+                return dynamic_route_with_param
 
-        app.route(path, methods=["GET"])(create_get_route(response_data))
+            # Register the dynamic route with path parameters
+            app.route(path, methods=["GET"])(create_get_route_with_param(response_data))
+        else:
+            # Handle static routes
+            def create_get_route(response):
+                def dynamic_route():
+                    return jsonify(response)
+                return dynamic_route
+
+            # Register the dynamic static route
+            app.route(path, methods=["GET"])(create_get_route(response_data))
 
 
 if __name__ == '__main__':

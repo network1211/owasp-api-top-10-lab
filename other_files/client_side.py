@@ -1,7 +1,7 @@
 import requests
 import random
 
-BASE_URL = "https://jw-owasp.apac-ent.f5demos.com"
+BASE_URL = "{{Your Domain Name, ex> https://domain.f5xc.test"
 HEADERS = {"Content-Type": "application/json"}
 
 # Generate up to 50 fake public IPs

@@ -1,8 +1,53 @@
 import requests
 import random
+import json
+import os
 
 BASE_URL = "{{Your Domain Name, ex> https://domain.f5xc.test"
 HEADERS = {"Content-Type": "application/json"}
+
+## Token Generating Logic ##
+TOKEN_FILE = "token.json"
+
+def load_or_generate_tokens(user_ids):
+    tokens = {}
+
+    # Step 1: Load token.json if exists
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, "r") as f:
+                tokens = json.load(f)
+            print("[INFO] Loaded tokens from file.")
+        except Exception as e:
+            print(f"[ERROR] Failed to load token file: {e}")
+            tokens = {}
+
+    # Step 2: Generate tokens if missing
+    updated = False
+    for user_id in user_ids:
+        if user_id not in tokens:
+            try:
+                r = requests.get(f"{BASE_URL}/generate_token/{user_id}")
+                token = r.json().get("token")
+                if not token:
+                    print(f"[ERROR] No token for user {user_id}")
+                    continue
+                tokens[user_id] = token
+                updated = True
+                print(f"[INFO] Token generated for user {user_id}")
+            except Exception as e:
+                print(f"[ERROR] Token generation failed for {user_id}: {e}")
+
+    # Step 3: Save updated tokens
+    if updated:
+        try:
+            with open(TOKEN_FILE, "w") as f:
+                json.dump(tokens, f, indent=2)
+            print("[INFO] Saved updated tokens.")
+        except Exception as e:
+            print(f"[ERROR] Failed to save token file: {e}")
+
+    return tokens
 
 # Generate up to 50 fake public IPs
 def generate_fake_ips(count=50):
@@ -104,10 +149,10 @@ def test_bola():
     print(f"[UNAUTHORIZED] /users/{random_unauth_id} → {r_unauth.status_code}")
 
     # Authorized requests
+    tokens = load_or_generate_tokens(FIXED_USER_IDS)
     for user_id in FIXED_USER_IDS:
         try:
-            r = requests.get(f"{BASE_URL}/generate_token/{user_id}")
-            token = r.json()["token"]
+            token = tokens[user_id]
             headers_valid = with_fixed_ip(user_id, {"Authorization": f"Bearer {token}"})
             r_valid = requests.get(f"{BASE_URL}/api/v1/users/{user_id}", headers=headers_valid)
             print(f"[AUTHORIZED] /users/{user_id} → {r_valid.status_code}")
